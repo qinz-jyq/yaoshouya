@@ -697,6 +697,7 @@ body {
       <div class="activity-mini" style="flex:1"><div class="am-val" id="actRestingCal">0</div><div class="am-label">静息能量 kcal</div></div>
     </div>
   </div>
+  <div class="sync-time" id="actSyncTime" style="text-align:center;font-size:12px;color:#999;margin-top:4px;"></div>
   <div class="card">
     <div class="card-header"><h3>手动录入</h3></div>
     <div class="input-row">
@@ -713,8 +714,9 @@ body {
       打开 iPhone「快捷指令」App → 右上角 + 新建 →<br>
       ① 搜索添加「查找健康样本」→ 类型选<strong>活动能量</strong>，时长选"今天"<br>
       ② 再添加一个「查找健康样本」→ 类型选<strong>静息能量</strong>，时长选"今天"<br>
-      ③ 添加「文本」操作，输入以下链接（点下方按钮复制）：<br>
-      <code id="shortcutUrl">https://qinz-jyq.github.io/yaoshouya/?active=[活动]&resting=[静息]</code><br>
+      ③ 添加「文本」操作，点下方「复制同步链接」按钮复制链接文本：<br>
+      <code id="shortcutUrl">https://qinz-jyq.github.io/yaoshouya/?active=&lt;活动热量&gt;&amp;resting=&lt;静息热量&gt;</code><br>
+      <strong>⚠️ 关键步骤：</strong>在文本框中，选中 <code>[活动]</code>（含括号）→ 删除 → 点键盘上方出现的变量选择器 → 选第①步的"活动能量"输出；同样，选中 <code>[静息]</code> → 删除 → 选第②步的"静息能量"输出。<br>
       ④ 添加「打开 URL」操作 → URL 选上一步的"文本"<br>
       ⑤ 给快捷指令命名：<strong>要瘦鸭同步</strong><br><br>
       <strong>第 2 步：设置自动化</strong><br>
@@ -1349,16 +1351,33 @@ function parseURLParams() {
   const resting = params.get('resting');
   if (!active && !resting) return false;
 
+  const activeNum = parseFloat(active);
+  const restingNum = parseFloat(resting);
+
+  // Validate: both params must be valid numbers
+  if (isNaN(activeNum) && isNaN(restingNum)) {
+    showToast('同步失败：未获取到有效数值。请在快捷指令中确认已将 [活动] 和 [静息] 替换为健康样本变量。', 'error');
+    if (window.history && window.history.replaceState) {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    return false;
+  }
+
   const today = todayStr();
   const log = getLog(today);
-  if (active) log.activeCal = Math.round(parseFloat(active));
-  if (resting) log.restingCal = Math.round(parseFloat(resting));
+  if (!isNaN(activeNum)) log.activeCal = Math.round(activeNum);
+  if (!isNaN(restingNum)) log.restingCal = Math.round(restingNum);
   setLog(today, log);
+
+  // Record sync time
+  try { localStorage.setItem('ft_last_sync', new Date().toISOString()); } catch(e) {}
 
   // Clean URL
   if (window.history && window.history.replaceState) {
     window.history.replaceState({}, '', window.location.pathname);
   }
+
+  showToast('Apple Watch 数据已同步！活动: ' + (log.activeCal || 0) + ' kcal, 静息: ' + (log.restingCal || 0) + ' kcal', 'success');
   return true;
 }
 
@@ -1826,6 +1845,19 @@ function renderActivityTab() {
   document.getElementById('actActiveCal').textContent = log.activeCal || 0;
   document.getElementById('actRestingCal').textContent = log.restingCal || Math.round(calcBMR(getLatestWeight()||53.5, 160, 26));
 
+  // Show last sync time
+  var lastSync = null;
+  try { lastSync = localStorage.getItem('ft_last_sync'); } catch(e) {}
+  var syncEl = document.getElementById('actSyncTime');
+  if (syncEl) {
+    if (lastSync) {
+      var dt = new Date(lastSync);
+      syncEl.textContent = '上次同步: ' + dt.toLocaleString('zh-CN', {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    } else {
+      syncEl.textContent = '尚未通过快捷指令同步';
+    }
+  }
+
   // Fill inputs
   document.getElementById('actInputActive').placeholder = log.activeCal ? log.activeCal + '' : '';
   document.getElementById('actInputResting').placeholder = log.restingCal ? log.restingCal + '' : '';
@@ -1853,13 +1885,13 @@ function saveActivity() {
 
 // Shortcut URL
 function updateShortcutUrl() {
-  var url = window.location.origin + window.location.pathname + '?active=[活动]&resting=[静息]';
+  var url = window.location.origin + window.location.pathname + '?active=<活动热量>&resting=<静息热量>';
   var el = document.getElementById('shortcutUrl');
   if (el) el.textContent = url;
 }
 
 function copyShortcutUrl() {
-  var url = window.location.origin + window.location.pathname + '?active=[活动]&resting=[静息]';
+  var url = window.location.origin + window.location.pathname + '?active=<活动热量>&resting=<静息热量>';
   if (navigator.clipboard) {
     navigator.clipboard.writeText(url).then(function() {
       showToast('链接已复制！粘贴到快捷指令的"文本"框中', 'success');
