@@ -708,14 +708,22 @@ body {
   <div class="card">
     <div class="card-header"><h3>iOS 快捷指令同步</h3></div>
     <div class="shortcut-hint">
-      <strong>自动同步 Apple Watch 数据：</strong><br>
-      1. 打开 iPhone「快捷指令」App<br>
-      2. 新建快捷指令 → 添加操作「查找健康样本」<br>
-      3. 分别读取：活动能量、静息能量<br>
-      4. 添加「打开 URL」：<br>
-      <code id="shortcutUrl">http://YOUR_IP:8080?active=[活动]&resting=[静息]</code><br>
-      5. 设置自动化：每天早 9 点运行<br>
-      <button class="btn btn-sm btn-outline mt-sm" onclick="copyShortcutUrl()">复制链接</button>
+      <strong>Apple Watch 数据同步方法：</strong><br><br>
+      <strong>第 1 步：创建快捷指令</strong><br>
+      打开 iPhone「快捷指令」App → 右上角 + 新建 →<br>
+      ① 搜索添加「查找健康样本」→ 类型选<strong>活动能量</strong>，时长选"今天"<br>
+      ② 再添加一个「查找健康样本」→ 类型选<strong>静息能量</strong>，时长选"今天"<br>
+      ③ 添加「文本」操作，输入以下链接（点下方按钮复制）：<br>
+      <code id="shortcutUrl">https://qinz-jyq.github.io/yaoshouya/?active=[活动]&resting=[静息]</code><br>
+      ④ 添加「打开 URL」操作 → URL 选上一步的"文本"<br>
+      ⑤ 给快捷指令命名：<strong>要瘦鸭同步</strong><br><br>
+      <strong>第 2 步：设置自动化</strong><br>
+      快捷指令 App → 底部「自动化」→ + →「个人自动化」→<br>
+      选「特定时间」→ 设为 <strong>上午 9:00</strong> → 每天重复 →<br>
+      添加操作「运行快捷指令」→ 选「要瘦鸭同步」→ 完成<br><br>
+      <strong>第 3 步：手动触发</strong><br>
+      也可以随时在快捷指令 App 点「要瘦鸭同步」手动同步，或加到桌面小组件。<br>
+      <button class="btn btn-sm btn-outline mt-sm" onclick="copyShortcutUrl()">复制同步链接</button>
     </div>
   </div>
   <div class="card">
@@ -1845,20 +1853,16 @@ function saveActivity() {
 
 // Shortcut URL
 function updateShortcutUrl() {
-  var host = window.location.hostname;
-  var port = window.location.port || '8080';
-  var url = 'http://' + host + ':' + port + '/?active=[活动]&resting=[静息]';
+  var url = window.location.origin + window.location.pathname + '?active=[活动]&resting=[静息]';
   var el = document.getElementById('shortcutUrl');
   if (el) el.textContent = url;
 }
 
 function copyShortcutUrl() {
-  var host = window.location.hostname;
-  var port = window.location.port || '8080';
-  var url = 'http://' + host + ':' + port + '/?active=[活动]&resting=[静息]';
+  var url = window.location.origin + window.location.pathname + '?active=[活动]&resting=[静息]';
   if (navigator.clipboard) {
     navigator.clipboard.writeText(url).then(function() {
-      showToast('链接已复制，粘贴到快捷指令中', 'success');
+      showToast('链接已复制！粘贴到快捷指令的"文本"框中', 'success');
     });
   } else {
     showToast('请手动复制上方链接', 'info');
